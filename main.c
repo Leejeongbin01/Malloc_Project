@@ -29,3 +29,21 @@
 #define NEXT_BLKP(bp) ((char*)bp) + GET_SIZE(((char*)(bp)-WSIZE))) // 그 다음 블록의 bp위치로 이동한다. 해당 블록의 크기만큼 이동, 블록의 헤더 뒤로 이동
 #define PREV_BLKP(bp) ((char*)bp) -GET_SIZE(((char*)(bp)-DSIZE)) // 그 전 블록의 bp위치로 이동 (이전 블록의 footer로 이동하면, 그 전 블록의 사이즈를알 수 있음
 static char* heap_listp; // 처음에쓸 큰 가용블록 힙을 만들어줌
+
+
+int mm_init(){ // 처음 heap을 시작할 때, 0부터 시작
+    if((heap_listp=mem_sbrk(4*WSIZE))==(void*)-1){
+        return -1; //4*4 바이트만큼 늘려서 old,mem brk로 늘림
+    }
+    PUT(heap_listp,0); // 블록 생성시 넣는 패딩을 한 워드크기만큼 생성. heap 위치 맨 앞에 넣음
+    PUT(heap_listp+(1*WSIZE),pack(DSIZE,1)); // prologue 헤더 생성. 할당을 하고, 8만큼 준다.>>4바이트 늘어난 시점부터 팩에서 나온 사이즈를 줄거다. 
+    PUT(heap_listp+(2*WSIZE),pack(DSIZE,1)); // prologue 푸터 생성.
+    PUT(heap_listp+(3*WSIZE),pack(0,1)); //epilogue block header를 만든다. 뒤로 밀리는형태
+    heap_listp+=(2*WSIZE); //prologue header와 footer 사이로 포인터로 옮긴다.
+
+    if(extend_heap(CHUNKSIZE/WSIZE)==NULL){ //extended heap을 통해 시작할 때 한번 heap을 늘려준다.
+        return -1;
+    }
+
+    return 0;
+}
