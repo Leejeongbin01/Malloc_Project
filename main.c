@@ -142,3 +142,52 @@ static void* find_fit(size_t asize) { // first fit 검색을 수행
     }
     return NULL; // not fit상태
 }
+
+static void place(void* bp, size_t asize) { // 들어갈 위치를 포인터로 받는다.
+   // 요청한 블록을 가용 블록의 시작 부분에 배치, 나머지 부분의 크기가 최소 블록크기와 같거나 큰 경우에만 분할하는 함수
+    size_t csize = GET_SIZE(HDRP(bp)); //현재 있는 블록의 사이즈
+    if ((csize - asize) >= (2 * DSIZE)) { //현재 블록 사이즈 안에 asize를 넣어도 2*DSIZE가 남냐? 남으면 다른 data를 넣을 수 잇으므로
+        PUT(HDRP(bp), PACK(asize, 1)); // 헤더 위치에 asize만큼 넣고 1(alloc)로 상태변환, 원래 헤더 사이즈에서 지금 넣으려고 하는 사이즈로 갱신
+        PUT(FTRP(bp), PACK(asize, 1)); // 푸터위치도 1로 변경
+        bp = NEXT_BLKP(bp); // regular block만큼 1개 이동해서 bp위치 갱신
+        PUT(HDRP(bp), PACK(csize - asize, 0)); // 나머지 블록은 (csize-asize)다 가용한 것을 다음 헤더에 표시
+        PUT(FTRP(bp), PACK(csize - asize, 0)); // 푸터에도 표시
+    }
+    else {
+        PUT(HDRP(bp), PACK(csize, 1)); //위의 조건이 아니면 asize만 csize에 들어갈 수 있음
+        PUT(FTRP(bp), PACK(csize, 1));
+    }
+}
+
+// 블록을 반환하고 경계 태그 연결 사용 -> 상수 시간안에 인접한 가용블록들과 통합하는 함수
+void mm_free(void* bp) {
+    // 어느 시점에 있는 bp를 인자로 받는다.
+    size_t size = GET_SIZE(HDRP(bp)); // 얼만큼 free해야 하는지
+    PUT(HDRP(bp), PACK(size, 0)); // 헤더,푸터를 free, 안에 있는걸 지우는 것이 아님 
+    PUT(FTRP(bp), PACK(size, 0));
+    coalesce(bp); // 연결
+}
+
+void* mm_realloc(void* bp, size_t size) {
+    if (size <= 0) {
+        mm_free(bp);
+        return 0;
+    }
+
+    if (bp == NULL) {
+        return mm_malloc(size);
+    }
+
+    void* newp = mm_malloc(size);
+    if (newp == NULL) {
+        return 0;
+    }
+
+    size_t oldsize = GET_SIZE(HDRP(bp));
+    if (size < oldsize) {
+        oldsize = size;
+    }
+    memcpy(newp, bp, oldsize);
+    mm_free(bp);
+    return newp;
+}
