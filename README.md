@@ -5,6 +5,6 @@
 
 ***
 1. Mallco Lab / ~10.27                                       (Done)
-2. small object (book given by Professor) / ~10.29           (Not yet)
+2. small object (book given by Professor) / ~10.29           (Not yet)<span style="color:red"> 글씨색 변경 </span>
 3. Toronto malloc example / ~11.03                           (Not yet)
 
