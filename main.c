@@ -99,4 +99,46 @@ static void* coalesce(void* bp) {
     return bp;
 }
 
-l
+void* mm_malloc(size_t size) { // 가용 리스트에서 블록 할당하기
+    size_t asize; // 블록 사이즈 조정
+    size_t extendsize; // 힙에 맞는 fit이 없으면 확장하기 위한 사이즈
+    char* bp;
+
+    // 거짓된 요청 무시
+    if (size == 0) {
+        return NULL; // 인자로 받은 size가 0이니깐 할당할 필요 없음
+    }
+
+    // overhead, alignment 요청 포함해서 블록 사이즈 조정
+    if (size <= DSIZE) {
+        asize = 2 * DSIZE; // 헤더와 푸터를 포함해서 블록 사이즈를 조정해야 하므로 8바이트의 2배
+    }
+    else {
+        asize = DSIZE * ((size + (DSIZE)+(DSIZE - 1)) / DSIZE); // 사이즈 보다 클때, 블록이 가질 수 있는 크기 중에 최적화된 크기로 재조정
+    }
+
+    // fit에 맞는 free 리스트를 찾는다.
+    if ((bp = find_fit(asize)) != NULL) {
+        place(bp, asize);
+        return bp; // place를 마친 블록의 위치를 리턴
+    }
+
+    // fit에 맞는게 없다. 메모리를 더 가져와 block을 위치시킨다. 
+    extendsize = MAX(asize, CHUNKSIZE); // asize와 우리가 원래 처음에 세팅한 사이즈 중,더 큰 것을 넣는다
+    if ((bp = extend_heap(extendsize / WSIZE)) == NULL) {
+        return NULL;
+    }
+    place(bp, asize); // 확장된 상태에서 aszie를 넣어라 
+    return bp;
+}
+
+static void* find_fit(size_t asize) { // first fit 검색을 수행
+    void* bp;
+    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) { // init에서 쓴 heap_listd를 쓴다. 처음 출발하고 그 다음이 regular block첫번째 헤더 뒤에
+        // for문이계속돌면, epilogue header까지 간다. 헤더는 0이므로 종료된다.
+        if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))) { // 이 블록이 가용가능하고, 내가 갖고있는 asize를 담을 수 있다면
+            return bp; // 내가넣을 수 있는 블록만 찾는거니깐, 찾으면 바로 리턴
+        }
+    }
+    return NULL; // not fit상태
+}
