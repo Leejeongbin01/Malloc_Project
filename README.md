@@ -5,6 +5,6 @@
 
 ***
 1. Mallco Lab / ~10.27                                       **(Done)**
-2. small object (book given by Professor) / ~10.30           **(30%)**
-3. Toronto malloc example / ~11.03                           **(Not yet)**
+2. small object (book given by Professor) / ~10.30           **(50%)**
+3. Toronto malloc example / ~11.03                           **(Done)**
 
